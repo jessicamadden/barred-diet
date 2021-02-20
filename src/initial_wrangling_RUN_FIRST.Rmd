@@ -1,0 +1,98 @@
+---
+title: "Initial wrangling"
+author: "Jess Madden"
+date: "2/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+```
+
+```{r}
+gut_contents_all <- read_xlsx(here("data", "Diet_gutcontent_data_raw.xlsx")) %>% 
+  clean_names()
+seine_data <- read_xlsx(here("data", "Diet_seasonal_seine_data_raw.xlsx")) %>% 
+  clean_names()
+prey_size_data <- read_xlsx(here("data", "Diet_gutcontent_size_data_raw.xlsx")) %>% 
+  clean_names()
+```
+
+Create unique fish id code in each data set
+
+```{r}
+gut_contents_all <- gut_contents_all %>% 
+  mutate(site_code = case_when(
+    site == "Percos" ~ 1, 
+    site == "Refugio" ~ 2, 
+    site == "R Beach" ~ 3
+  )) %>% 
+  mutate(fish_id = paste(site_code, date, recorded_fish_id, sep = "_"))
+
+seine_data <- seine_data %>% 
+  select(site, date, collection_method, haul_number, sample_number, common_name, count, tl_mm, sl_mm, sex, gut_collected, isotope_sample, notes) %>% 
+  filter(gut_collected == "Yes") %>% 
+  mutate(site_code = case_when(
+    site == "Percos" ~ 1, 
+    site == "Refugio" ~ 2, 
+    site == "R Beach" ~ 3
+  )) %>% 
+  mutate(fish_id = paste(site_code, date, sample_number, sep = "_"))
+
+prey_size_data <- prey_size_data %>% 
+  rename("recorded_fish_id" = "fish_id") %>% 
+  mutate(site_code = case_when(
+    site == "Percos" ~ 1, 
+    site == "Refugio" ~ 2, 
+    site == "R Beach" ~ 3
+  )) %>% 
+  mutate(fish_id = paste(site_code, date, recorded_fish_id, sep = "_"))
+```
+
+
+Add in fish length data to gut content data frame
+
+```{r}
+fish_data <- seine_data %>% 
+  select(fish_id, sex, tl_mm, sl_mm)
+
+gut_contents_all <- gut_contents_all %>% 
+  full_join(fish_data)
+
+write.csv(gut_contents_all, here("data", "Diet_gutcontent_data.csv"))
+```
+
+Add fish data to prey size data frame
+
+```{r}
+prey_size_data <- prey_size_data %>% 
+  full_join(fish_data)
+
+write.csv(prey_size_data, here("data", "Prey_size_data.csv"))
+```
+
+Exploratory plots of emerita in guts
+
+```{r}
+emerita_prey <- gut_contents_all %>% 
+  filter(id == "Emerita analoga")
+
+ggplot(emerita_prey, aes(x = sl_mm, y = count)) +
+  geom_point(aes(color = sex)) +
+  theme_minimal()
+```
+
+
+```{r}
+emerita_size <- prey_size_data %>% 
+  filter(category == "Emerita analoga")
+
+ggplot(emerita_size, aes(x = sl_mm, y = size_mm)) +
+  geom_jitter(aes(color = sex)) +
+  theme_minimal()
+```
+

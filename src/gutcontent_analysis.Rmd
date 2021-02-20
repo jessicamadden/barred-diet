@@ -1,0 +1,54 @@
+---
+title: "Gut Content Analysis"
+author: "Jess Madden"
+date: "2/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+```
+
+```{r}
+gut_content_all <- read.csv(here("data", "Diet_gutcontent_data.csv"))
+
+#only interested in guts from R Beach, Refugio, and Percos
+
+gut_contents <- gut_content_all %>% 
+  filter(site %in% c("Refugio", "Percos", "R Beach"))
+```
+
+```{r}
+# Frequency of occurence by site
+
+prey_list <- unique(gut_contents$id)
+
+##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
+check_Ni <- gut_contents %>% 
+  mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
+  get_dupes(fish_id_id)
+
+factor(gut_contents$id)
+
+Ni <- gut_contents %>% 
+  group_by(site) %>% 
+  count(id) %>% 
+  rename("Ni" = "n")
+
+N_guts <- gut_contents %>% 
+  group_by(site) %>% 
+  summarize(n_distinct(fish_id))
+
+#calculate %Fi
+
+Fi <- Ni %>% 
+  full_join(N_guts) %>% 
+  rename("N_guts" = "n_distinct(fish_id)") %>% 
+  mutate(Fi = ((Ni/N_guts)*100))
+```
+
