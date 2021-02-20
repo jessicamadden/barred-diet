@@ -23,22 +23,26 @@ gut_contents <- gut_content_all %>%
   filter(site %in% c("Refugio", "Percos", "R Beach"))
 ```
 
+
+###Amundsen plots
+
+Frequency of occurence of prey i: %Fi = (Ni/N)*100
+Prey specific abundance: %Pi = (sum(Si)/sum(Sti)*100)
+
 ```{r}
 # Frequency of occurence by site
 
-prey_list <- unique(gut_contents$id)
-
 ##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
-check_Ni <- gut_contents %>% 
+check_N_i <- gut_contents %>% 
   mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
   get_dupes(fish_id_id)
 
 factor(gut_contents$id)
 
-Ni <- gut_contents %>% 
+N_i <- gut_contents %>% 
   group_by(site) %>% 
   count(id) %>% 
-  rename("Ni" = "n")
+  rename("N_i" = "n")
 
 N_guts <- gut_contents %>% 
   group_by(site) %>% 
@@ -46,9 +50,50 @@ N_guts <- gut_contents %>%
 
 #calculate %Fi
 
-Fi <- Ni %>% 
+F_i <- N_i %>% 
   full_join(N_guts) %>% 
   rename("N_guts" = "n_distinct(fish_id)") %>% 
-  mutate(Fi = ((Ni/N_guts)*100))
+  mutate(F_i = ((N_i/N_guts)*100))
 ```
 
+```{r}
+# Prey-specific abundance
+
+S_i <- gut_contents %>% 
+  group_by(site, id) %>%
+  summarise(S_i = sum(count))
+
+#S_ti 
+
+emerita_fish <- gut_contents %>% 
+  filter(id == "Emerita analoga") %>% 
+  select(fish_id) %>% 
+  pull(fish_id) #vectorizes the list of fish guts that had emerita in them
+
+S_t_emerita <- gut_contents %>%
+  filter(fish_id %in% emerita_fish) %>% 
+  group_by(site) %>%
+  summarise(S_ti = sum(count))
+
+#calculate %Pi for emerita
+
+P_i <- S_i %>% 
+  filter(id == "Emerita analoga") %>% 
+  full_join(S_t_emerita) %>% 
+  mutate(P_i = ((S_i)/(S_ti)*100))
+```
+
+Plot emerita 
+
+```{r}
+emerita <- F_i %>% 
+  full_join(P_i) %>% 
+  filter(id == "Emerita analoga")
+  
+ggplot(emerita, aes(x = F_i, y = P_i)) +
+  geom_point() +
+  facet_wrap(~site) +
+  theme_minimal()
+```
+
+-
