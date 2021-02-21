@@ -15,7 +15,7 @@ library(janitor)
 ```
 
 ```{r}
-gut_content_all <- read.csv(here("data", "Diet_gutcontent_data.csv"))
+gut_content_all <- read.csv(here::here("data", "Diet_gutcontent_data.csv"))
 
 #only interested in guts from R Beach, Refugio, and Percos
 
@@ -37,7 +37,6 @@ check_N_i <- gut_contents %>%
   mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
   get_dupes(fish_id_id)
 
-factor(gut_contents$id)
 
 N_i <- gut_contents %>% 
   group_by(site) %>% 
@@ -81,6 +80,20 @@ P_i <- S_i %>%
   filter(id == "Emerita analoga") %>% 
   full_join(S_t_emerita) %>% 
   mutate(P_i = ((S_i)/(S_ti)*100))
+
+#Calculate %Pi for each species
+
+species_list <- unique(gut_contents$id)
+
+S_ti <- data.frame()
+for (spp in species_list){
+  print(spp)
+  fish <- gut_contents %>% filter(id == spp) %>% select(id, fish_id)
+  sum_t <- gut_contents %>% filter(fish_id %in% fish$fish_id) %>% group_by(site) %>% summarise(S_ti = sum(count))
+  dat <- sum_t %>% mutate(species = spp)
+  S_ti <- rbind.data.frame(S_ti, dat)
+}
+
 ```
 
 Plot emerita 
@@ -93,7 +106,12 @@ emerita <- F_i %>%
 ggplot(emerita, aes(x = F_i, y = P_i)) +
   geom_point() +
   facet_wrap(~site) +
-  theme_minimal()
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  coord_fixed(ratio = 1) +
+  labs(x = "% Frequency of occurence", y = "% Prey-specific abundance")
+
 ```
 
 -
