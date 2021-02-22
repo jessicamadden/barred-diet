@@ -11,6 +11,7 @@ library(tidyverse)
 library(here)
 library(readxl)
 library(janitor)
+library(lubridate)
 ```
 
 ```{r}
@@ -22,7 +23,6 @@ prey_size_data <- read_xlsx(here("data", "Diet_gutcontent_size_data_raw.xlsx")) 
   clean_names()
 ```
 
-Create unique fish id code in each data set
 
 ```{r}
 gut_contents_all <- gut_contents_all %>% 
@@ -31,8 +31,23 @@ gut_contents_all <- gut_contents_all %>%
     site == "Refugio" ~ 2, 
     site == "R Beach" ~ 3
   )) %>% 
-  mutate(fish_id = paste(site_code, date, recorded_fish_id, sep = "_"))
-
+  mutate(fish_id = paste(site_code, date, recorded_fish_id, sep = "_")) %>%  #Create unique fish id code in each data set
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) #adds in column for season
+  
 seine_data <- seine_data %>% 
   select(site, date, collection_method, haul_number, sample_number, common_name, count, tl_mm, sl_mm, sex, gut_collected, isotope_sample, notes) %>% 
   filter(gut_collected == "Yes") %>% 

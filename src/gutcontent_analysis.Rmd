@@ -62,7 +62,7 @@ S_i <- gut_contents %>%
   group_by(site, id) %>%
   summarise(S_i = sum(count))
 
-#S_ti 
+#S_t_emerita
 
 emerita_fish <- gut_contents %>% 
   filter(id == "Emerita analoga") %>% 
@@ -74,14 +74,9 @@ S_t_emerita <- gut_contents %>%
   group_by(site) %>%
   summarise(S_ti = sum(count))
 
-#calculate %Pi for emerita
 
-P_i <- S_i %>% 
-  filter(id == "Emerita analoga") %>% 
-  full_join(S_t_emerita) %>% 
-  mutate(P_i = ((S_i)/(S_ti)*100))
 
-#Calculate %Pi for each species
+#Calculate S_ti for each species
 
 species_list <- unique(gut_contents$id)
 
@@ -94,6 +89,18 @@ for (spp in species_list){
   S_ti <- rbind.data.frame(S_ti, dat)
 }
 
+#calculate %Pi
+
+S_i <- S_i %>% 
+  mutate(site_id = paste(site, id, sep = "_"))
+
+S_ti <- S_ti %>% 
+  mutate("site_id" = paste(site, species, sep = "_"))
+
+P_i <- S_i %>% 
+  full_join(S_ti) %>% 
+  select(site, id, S_i, S_ti) %>% 
+  mutate(P_i = ((S_i/S_ti)*100))
 ```
 
 Plot emerita 
@@ -114,4 +121,196 @@ ggplot(emerita, aes(x = F_i, y = P_i)) +
 
 ```
 
--
+Plot certain species
+
+```{r}
+amundsen <- F_i %>% 
+  full_join(P_i) %>% 
+  filter(id %in% c("Emerita analoga", "Blepharipoda occidentalis", "Donax gouldii", "Tivela stultornum", "Excirolana chiltoni", "Idotea resecata"))
+  
+ggplot(amundsen, aes(x = F_i, y = P_i, color=id)) +
+  geom_point() +
+  facet_wrap(~site) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  coord_fixed(ratio = 1) +
+  labs(x = "% Frequency of occurence", y = "% Prey-specific abundance")
+```
+
+### Amundsen plots: repeat analysis for adult vs juvenile fish by site
+
+
+Frequency of occurrence of prey i: %Fi = (Ni/N)*100
+Prey specific abundance: %Pi = (sum(Si)/sum(Sti)*100)
+
+```{r}
+# Frequency of occurrence by life stage
+
+gut_contents_ls <- gut_contents %>% 
+  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile")) %>%  #Adds column for life stage
+  filter(lifestage %in% c("Adult", "Juvenile")) #Removes fish with no sex recorded
+
+##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
+check_N_i <- gut_contents_ls %>% 
+  mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
+  get_dupes(fish_id_id)
+
+
+N_i_ls <- gut_contents_ls %>% 
+  group_by(site, lifestage) %>% 
+  count(id) %>% 
+  rename("N_i_ls" = "n")
+
+N_guts_ls <- gut_contents_ls %>% 
+  group_by(site, lifestage) %>% 
+  summarize(n_distinct(fish_id))
+
+#calculate %Fi
+
+F_i_ls <- N_i_ls %>% 
+  full_join(N_guts_ls) %>% 
+  rename("N_guts_ls" = "n_distinct(fish_id)") %>% 
+  mutate(F_i_ls = ((N_i_ls/N_guts_ls)*100))
+```
+
+```{r}
+# Prey-specific abundance
+
+S_i_ls <- gut_contents_ls %>% 
+  group_by(site, lifestage, id) %>%
+  summarise(S_i_ls = sum(count)) %>% 
+  mutate(lifestage_id = paste(site, lifestage, id, sep = "_"))
+
+#Calculate S_ti for each species
+
+species_list <- unique(gut_contents_ls$id)
+
+S_ti_ls <- data.frame()
+for (spp in species_list){
+  print(spp)
+  fish <- gut_contents_ls %>% filter(id == spp) %>% select(id, fish_id)
+  sum_t <- gut_contents_ls %>% filter(fish_id %in% fish$fish_id) %>% group_by(site, lifestage) %>% summarise(S_ti_ls = sum(count))
+  dat <- sum_t %>% mutate(id = spp) %>% mutate(lifestage_id = paste(site, lifestage, id, sep = "_"))
+  S_ti_ls <- rbind.data.frame(S_ti_ls, dat)
+}
+
+#calculate %Pi
+
+P_i_ls <- S_i_ls %>% 
+  full_join(S_ti_ls) %>% 
+  select(site, lifestage, id, S_i_ls, S_ti_ls) %>% 
+  mutate(P_i_ls = ((S_i_ls/S_ti_ls)*100))
+```
+
+
+Amundsen plots by lifestage (dominant taxa)** needs refinement
+
+```{r}
+amundsen_ls <- F_i_ls %>% 
+  full_join(P_i_ls) %>% 
+  filter(id %in% c("Emerita analoga", "Blepharipoda occidentalis", "Donax gouldii", "Tivela stultornum", "Excirolana chiltoni", "Idotea resecata", "Mysid"))
+
+gut_contents_ls$site <- as.factor(gut_contents_ls$site)
+gut_contents_ls$lifestage <- as.factor(gut_contents_ls$lifestage)
+
+sample_size_ls <- gut_contents_ls %>% 
+  group_by(lifestage) %>% 
+  summarise(sample_size = n())
+  
+ggplot(amundsen_ls, aes(x = F_i_ls, y = P_i_ls, color=id)) +
+  geom_point() +
+  facet_grid(lifestage ~ site) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  coord_fixed(ratio = 1) +
+  labs(x = "% Frequency of occurrence", y = "% Prey-specific abundance")
+```
+
+
+### Amundsen plots: repeat analysis by season and site
+
+
+Frequency of occurrence of prey i: %Fi = (Ni/N)*100
+Prey specific abundance: %Pi = (sum(Si)/sum(Sti)*100)
+
+```{r}
+# Frequency of occurrence by season
+
+##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
+check_N_i <- gut_contents %>% 
+  mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
+  get_dupes(fish_id_id)
+
+
+N_i_ss <- gut_contents %>% 
+  group_by(site, season) %>% 
+  count(id) %>% 
+  rename("N_i_ss" = "n")
+
+N_guts_ss <- gut_contents %>% 
+  group_by(site, season) %>% 
+  summarize(n_distinct(fish_id))
+
+#calculate %Fi
+
+F_i_ss <- N_i_ss %>% 
+  full_join(N_guts_ss) %>% 
+  rename("N_guts_ss" = "n_distinct(fish_id)") %>% 
+  mutate(F_i_ss = ((N_i_ss/N_guts_ss)*100))
+```
+
+```{r}
+# Prey-specific abundance
+
+S_i_ss <- gut_contents %>% 
+  group_by(site, season, id) %>%
+  summarise(S_i_ss = sum(count)) %>% 
+  mutate(full_id = paste(site, season, id, sep = "_"))
+
+#Calculate S_ti for each species
+
+species_list <- unique(gut_contents$id)
+
+S_ti_ss <- data.frame()
+for (spp in species_list){
+  print(spp)
+  fish <- gut_contents %>% filter(id == spp) %>% select(id, fish_id)
+  sum_t <- gut_contents %>% filter(fish_id %in% fish$fish_id) %>% group_by(site, season) %>% summarise(S_ti_ss = sum(count))
+  dat <- sum_t %>% mutate(id = spp) %>% mutate(full_id = paste(site, season, id, sep = "_"))
+  S_ti_ss <- rbind.data.frame(S_ti_ss, dat)
+}
+
+#calculate %Pi
+
+P_i_ss <- S_i_ss %>% 
+  full_join(S_ti_ss) %>% 
+  select(site, season, id, S_i_ss, S_ti_ss) %>% 
+  mutate(P_i_ss = ((S_i_ss/S_ti_ss)*100))
+```
+
+
+Amundsen plots by season + site (dominant taxa** needs refinement)
+
+```{r}
+amundsen_ss <- F_i_ss %>% 
+  full_join(P_i_ss) %>% 
+  filter(id %in% c("Emerita analoga", "Blepharipoda occidentalis", "Donax gouldii", "Tivela stultornum", "Excirolana chiltoni", "Idotea resecata", "Mysid"))
+
+gut_contents$site <- as.factor(gut_contents$site)
+gut_contents$season <- as.factor(gut_contents$season)
+
+sample_size_ss <- gut_contents %>% 
+  group_by(season) %>% 
+  summarise(sample_size = n())
+  
+ggplot(amundsen_ss, aes(x = F_i_ss, y = P_i_ss, color=id)) +
+  geom_point() +
+  facet_grid(season ~ site) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  coord_fixed(ratio = 1) +
+  labs(x = "% Frequency of occurrence", y = "% Prey-specific abundance")
+```
