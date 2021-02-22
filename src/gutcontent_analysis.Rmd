@@ -1,5 +1,5 @@
 ---
-title: "Gut Content Analysis"
+title: "Gut Content Analysis: Amundsen graphs"
 author: "Jess Madden"
 date: "2/19/2021"
 output: html_document
@@ -15,11 +15,11 @@ library(janitor)
 ```
 
 ```{r}
-gut_content_all <- read.csv(here::here("data", "Diet_gutcontent_data.csv"))
+gut_contents_all <- read.csv(here::here("data", "Diet_gutcontent_data.csv"))
 
 #only interested in guts from R Beach, Refugio, and Percos
 
-gut_contents <- gut_content_all %>% 
+gut_contents <- gut_contents_all %>% 
   filter(site %in% c("Refugio", "Percos", "R Beach"))
 ```
 
@@ -148,7 +148,6 @@ Prey specific abundance: %Pi = (sum(Si)/sum(Sti)*100)
 # Frequency of occurrence by life stage
 
 gut_contents_ls <- gut_contents %>% 
-  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile")) %>%  #Adds column for life stage
   filter(lifestage %in% c("Adult", "Juvenile")) #Removes fish with no sex recorded
 
 ##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
@@ -295,8 +294,8 @@ Amundsen plots by season + site (dominant taxa** needs refinement)
 
 ```{r}
 amundsen_ss <- F_i_ss %>% 
-  full_join(P_i_ss) %>% 
-  filter(id %in% c("Emerita analoga", "Blepharipoda occidentalis", "Donax gouldii", "Tivela stultornum", "Excirolana chiltoni", "Idotea resecata", "Mysid"))
+  full_join(P_i_ss) #%>% 
+#  filter(id %in% c("Emerita analoga", "Blepharipoda occidentalis", "Donax gouldii", "Tivela stultornum", "Excirolana chiltoni", "Idotea resecata", "Mysid"))
 
 gut_contents$site <- as.factor(gut_contents$site)
 gut_contents$season <- as.factor(gut_contents$season)
@@ -314,3 +313,86 @@ ggplot(amundsen_ss, aes(x = F_i_ss, y = P_i_ss, color=id)) +
   coord_fixed(ratio = 1) +
   labs(x = "% Frequency of occurrence", y = "% Prey-specific abundance")
 ```
+
+###Amundsen plots: repeat analysis with prey taxa to family
+
+Frequency of occurence of prey i: %Fi = (Ni/N)*100
+Prey specific abundance: %Pi = (sum(Si)/sum(Sti)*100)
+
+```{r}
+# Frequency of occurence by site
+
+##### CHECK HERE THAT THERE ARE NO DUPLICATE GUT ITEMS
+check_N_i <- gut_contents %>% 
+  mutate(fish_id_id = paste(fish_id, id, sep = "_")) %>% 
+  get_dupes(fish_id_id)
+
+
+N_i_fam <- gut_contents %>% 
+  group_by(site) %>% 
+  count(family) %>% 
+  rename("N_i_fam" = "n")
+
+N_guts_fam <- gut_contents %>% 
+  group_by(site) %>% 
+  summarize(n_distinct(fish_id))
+
+#calculate %Fi
+
+F_i_fam <- N_i_fam %>% 
+  full_join(N_guts_fam) %>% 
+  rename("N_guts_fam" = "n_distinct(fish_id)") %>% 
+  mutate(F_i_fam = ((N_i_fam/N_guts_fam)*100))
+```
+
+```{r}
+# Prey-specific abundance
+
+S_i_fam <- gut_contents %>% 
+  group_by(site, family) %>%
+  summarise(S_i_fam = sum(count))
+
+#Calculate S_ti for each family
+
+family_list <- unique(gut_contents$family)
+
+S_ti_fam <- data.frame()
+for (fam in family_list){
+  print(fam)
+  fish <- gut_contents %>% filter(family == fam) %>% select(family, fish_id)
+  sum_t <- gut_contents %>% filter(fish_id %in% fish$fish_id) %>% group_by(site) %>% summarise(S_ti_fam = sum(count))
+  dat <- sum_t %>% mutate(family = fam)
+  S_ti_fam <- rbind.data.frame(S_ti_fam, dat)
+}
+
+#calculate %Pi
+
+S_i_fam <- S_i_fam %>% 
+  mutate(site_fam = paste(site, family, sep = "_"))
+
+S_ti_fam <- S_ti_fam %>% 
+  mutate(site_fam = paste(site, family, sep = "_"))
+
+P_i_fam <- S_i_fam %>% 
+  full_join(S_ti_fam) %>% 
+  select(site, family, S_i_fam, S_ti_fam) %>% 
+  mutate(P_i_fam = ((S_i_fam/S_ti_fam)*100))
+```
+
+Plot certain species
+
+```{r}
+amundsen_fam <- F_i_fam %>% 
+  full_join(P_i_fam)
+  
+ggplot(amundsen_fam, aes(x = F_i_fam, y = P_i_fam, color=family)) +
+  geom_point() +
+  facet_wrap(~site) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  coord_fixed(ratio = 1) +
+  labs(x = "% Frequency of occurence", y = "% Prey-specific abundance")
+```
+
+

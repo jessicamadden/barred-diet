@@ -46,7 +46,7 @@ gut_contents_all <- gut_contents_all %>%
     month == 3 ~ "Spring",
     month == 4 ~ "Spring",
     month == 5 ~ "Spring"
-  )) #adds in column for season
+  ))  #adds in column for season
   
 seine_data <- seine_data %>% 
   select(site, date, collection_method, haul_number, sample_number, common_name, count, tl_mm, sl_mm, sex, gut_collected, isotope_sample, notes) %>% 
@@ -76,7 +76,8 @@ fish_data <- seine_data %>%
   select(fish_id, sex, tl_mm, sl_mm)
 
 gut_contents_all <- gut_contents_all %>% 
-  full_join(fish_data)
+  full_join(fish_data) %>% 
+  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile"))  #Adds column for life stage contingent on standard length of fish
 
 write.csv(gut_contents_all, here("data", "Diet_gutcontent_data.csv"))
 ```
