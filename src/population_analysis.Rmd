@@ -13,6 +13,7 @@ library(readxl)
 library(janitor)
 library(lubridate)
 library(kableExtra)
+library(ggbeeswarm)
 ```
 
 Initial wrangling of seine data
@@ -47,7 +48,8 @@ barred <- seine_data %>%
   filter(sp_code == "AMAR") %>% 
   filter(gut_collected == "Yes") %>% 
   filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
-  filter(lifestage %in% c("Adult", "Juvenile"))
+  filter(lifestage %in% c("Adult", "Juvenile")) %>% 
+  filter(season %in% c("Summer", "Fall"))
 ```
 
 Table of fish collected for SCA
@@ -64,6 +66,13 @@ barred_summary <- barred %>%
 barred_summary %>% 
   kbl() %>% 
   kable_styling()
+
+ggplot(barred_summary, aes(x = site, y = mean_sl, fill = season)) +
+  geom_col(position = "dodge")
+
+ggplot(barred, aes(x = site, y = sl_mm, color = season)) +
+  geom_beeswarm() +
+  theme_minimal()
 ```
 
 Histogram of barred surfperch collected for gut analysis
@@ -73,5 +82,47 @@ ggplot(barred, aes(x = sl_mm)) +
   geom_histogram() +
   facet_grid(season ~ site) +
   theme_minimal()
+```
+
+
+Prey available vs prey ingested
+
+```{r}
+prey_size_data <- read_xlsx(here("data", "Diet_gutcontent_size_data_raw.xlsx")) %>% 
+  clean_names()
+
+emerita_ingested <- prey_size_data %>% 
+  filter(category == "Emerita analoga") %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach"))
+
+ggplot(emerita_ingested, aes(x = size_mm)) +
+  geom_histogram() +
+  theme_minimal()
+```
+
+```{r}
+emerita_pop_data <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx")) %>% 
+  clean_names() %>% 
+  subset(select = -c(22:23)) %>%
+  filter(taxa == "Emerita analoga") %>%   
+  filter(site %in% c("Percos", "Refugio", "R Beach"))
+
+emerita_pop_data$width_length_mm <- as.numeric(emerita_pop_data$width_length_mm)
+
+ggplot(emerita_pop_data, aes(x = width_length_mm)) +
+  geom_histogram() +
+  theme_minimal()
+```
+
+```{r}
+#2 sample t-test of all emerita data aggregated
+
+ingested_sizes <- emerita_ingested %>% 
+  pull(size_mm)
+
+pop_sizes <- emerita_pop_data %>% 
+  pull(width_length_mm)
+
+emerita_ttest <- t.test(x = ingested_sizes, y = pop_sizes)
 ```
 
