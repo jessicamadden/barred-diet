@@ -304,16 +304,19 @@ sample_size_ss <- gut_contents %>%
   group_by(season) %>% 
   summarise(sample_size = n())
   
-ggplot(amundsen_ss, aes(x = F_i_ss, y = P_i_ss, color=id)) +
+ggplot(amundsen_ss, aes(x = F_i_ss, y = P_i_ss, color=id, label = id, shape = season)) +
   geom_point() +
-  facet_grid(season ~ site) +
+  facet_wrap(~site) +
   theme_minimal() +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 100)) +
   coord_fixed(ratio = 1) +
-  labs(x = "% Frequency of occurrence", y = "% Prey-specific abundance")
+  labs(x = "% Frequency of occurrence", y = "% Prey-specific abundance") +
+  theme(legend.position = "bottom") +
+  geom_text(check.overlap = TRUE)
 ```
 
+ 
 ###Amundsen plots: repeat analysis with prey taxa to family
 
 Frequency of occurence of prey i: %Fi = (Ni/N)*100
@@ -349,7 +352,7 @@ F_i_fam <- N_i_fam %>%
 # Prey-specific abundance
 
 S_i_fam <- gut_contents %>% 
-  group_by(site, family) %>%
+  group_by(site, family, zone) %>%
   summarise(S_i_fam = sum(count))
 
 #Calculate S_ti for each family
@@ -359,7 +362,7 @@ family_list <- unique(gut_contents$family)
 S_ti_fam <- data.frame()
 for (fam in family_list){
   print(fam)
-  fish <- gut_contents %>% filter(family == fam) %>% select(family, fish_id)
+  fish <- gut_contents %>% filter(family == fam) %>% select(family, zone, fish_id)
   sum_t <- gut_contents %>% filter(fish_id %in% fish$fish_id) %>% group_by(site) %>% summarise(S_ti_fam = sum(count))
   dat <- sum_t %>% mutate(family = fam)
   S_ti_fam <- rbind.data.frame(S_ti_fam, dat)
@@ -375,7 +378,7 @@ S_ti_fam <- S_ti_fam %>%
 
 P_i_fam <- S_i_fam %>% 
   full_join(S_ti_fam) %>% 
-  select(site, family, S_i_fam, S_ti_fam) %>% 
+  select(site, family, zone, S_i_fam, S_ti_fam) %>% 
   mutate(P_i_fam = ((S_i_fam/S_ti_fam)*100))
 ```
 
@@ -385,14 +388,87 @@ Plot certain species
 amundsen_fam <- F_i_fam %>% 
   full_join(P_i_fam)
   
-ggplot(amundsen_fam, aes(x = F_i_fam, y = P_i_fam, color=family)) +
+ggplot(amundsen_fam, aes(x = F_i_fam, y = P_i_fam, color=family, label=family)) +
   geom_point() +
   facet_wrap(~site) +
   theme_minimal() +
   scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 100)) +
   coord_fixed(ratio = 1) +
-  labs(x = "% Frequency of occurence", y = "% Prey-specific abundance")
+  labs(x = "% Frequency of occurence", y = "% Prey-specific abundance") +
+  scale_color_discrete(labels=c("Hippidae" ="Sand crab", "Anthomyiidae" = "Kelp fly", "Caprellidae" = "Caprellid", "Cirolanidae" = "Intertidal isopod", "Idoteidae" = "Subtidal isopod", "Lottidae" = "Limpet", "Mysidae" = "Mysid", "Sphaeromatidae" = "Intertidal isopod", "Stronylocentrotidae" = "Purple urchin", "Albuneidae" = "Sand crab", "Ancinidae" = "Intertidal isopod","Cancridae" = "Crab", "Dendrasteridae" = "Sand dollar", "Donacidae" = "Bean clam", "Membraniporidae" = "Bryozoan", "Talitridae" = "Beach hopper", "Veneridae" = "Pismo clam")) +
+  geom_text(check.overlap = TRUE)
 ```
 
+
+
+Prey available vs prey ingested
+
+```{r}
+prey_size_data <- read_xlsx(here("data", "Diet_gutcontent_size_data_raw.xlsx")) %>% 
+  clean_names()
+
+emerita_ingested <- prey_size_data %>% 
+  filter(category == "Emerita analoga") %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  mutate(site_code = case_when(
+    site == "Percos" ~ 1, 
+    site == "Refugio" ~ 2, 
+    site == "R Beach" ~ 3
+  )) %>% 
+  mutate(fish_id = paste(site_code, date, fish_id, sep = "_")) %>% 
+  left_join(barred, by="fish_id")
+
+ggplot(emerita_ingested, aes(x = size_mm, fill=sl_mm, group =sl_mm)) +
+  geom_histogram() +
+  theme_minimal() +
+  xlim(0, 25) +
+  scale_fill_gradient(high = "cyan4", low = "grey") +
+  xlab("Ingested sand crab size (mm)") +
+  ylab("Count") +
+  labs(fill="Barred surfperch standard length (mm)") +
+  theme(legend.position = c(.8, .75))
+  
+
+ggplot(emerita_ingested, aes(x = sl_mm, fill=size_mm, group =size_mm)) +
+  geom_histogram() +
+  theme_minimal() +
+  scale_fill_gradient(high = "cyan4", low = "grey") +
+  xlab("Barred surfperch standard length (mm)") +
+  ylab("Count") +
+  labs(fill="Ingested sand crab size (mm)") +
+  theme(legend.position = c(.3, .75))
+```
+
+```{r}
+# repeat above plot but with emerita count not sizes!
+```
+
+
+```{r}
+emerita_pop_data <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx")) %>% 
+  clean_names() %>% 
+  subset(select = -c(22:23)) %>%
+  filter(taxa == "Emerita analoga") %>%   
+  filter(site %in% c("Percos", "Refugio", "R Beach"))
+
+emerita_pop_data$width_length_mm <- as.numeric(emerita_pop_data$width_length_mm)
+
+ggplot(emerita_pop_data, aes(x = width_length_mm)) +
+  geom_histogram(binwidth = 1) +
+  theme_minimal() +
+  xlim(0, 25)
+```
+
+```{r}
+#2 sample t-test of all emerita data aggregated
+
+ingested_sizes <- emerita_ingested %>% 
+  pull(size_mm)
+
+pop_sizes <- emerita_pop_data %>% 
+  pull(width_length_mm)
+
+emerita_ttest <- t.test(x = ingested_sizes, y = pop_sizes)
+```
 
