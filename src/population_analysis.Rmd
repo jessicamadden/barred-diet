@@ -84,3 +84,62 @@ ggplot(barred, aes(x = sl_mm)) +
   theme_minimal()
 ```
 
+```{r}
+#Load data
+
+emerita_pop <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx"), na = "NA") %>% 
+  clean_names() %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  filter(taxa == "Emerita analoga") %>% 
+  filter(transect %in% c("A", "B", "C"))
+  
+```
+
+```{r}
+emerita_abundance <- emerita_pop %>% 
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%   #adds in column for season
+  filter(season %in% c("Summer", "Fall")) %>% 
+  group_by(site, date, season, transect) %>% 
+  summarise(abundance = sum(count))
+
+emerita_abundance_summary <- emerita_abundance %>% 
+  group_by(site, date, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = (sd(abundance))/sqrt(n()), 
+            sample_size = n())
+```
+
+```{r}
+ggplot(emerita_abundance_summary, aes(x = site, y = mean_abundance, fill = season)) +
+  geom_col(position = "dodge") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
