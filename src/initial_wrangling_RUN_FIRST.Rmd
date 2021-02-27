@@ -46,7 +46,14 @@ gut_contents_all <- gut_contents_all %>%
     month == 3 ~ "Spring",
     month == 4 ~ "Spring",
     month == 5 ~ "Spring"
-  ))  #adds in column for season
+  )) %>%   #adds in column for season
+  filter(site %in% c("Refugio", "Percos", "R Beach")) %>% #only interested in guts from R Beach, Refugio, and Percos
+  filter(date != "2019-10-10") %>% #removes incorrect date entry
+  filter(empty == "No") %>% 
+  filter(count >0)
+
+gut_contents$site <- factor(gut_contents$site, levels = c("Percos", "Refugio", "R Beach"))  
+  
   
 seine_data <- seine_data %>% 
   select(site, date, collection_method, haul_number, sample_number, common_name, count, tl_mm, sl_mm, sex, gut_collected, isotope_sample, notes) %>% 
@@ -56,7 +63,23 @@ seine_data <- seine_data %>%
     site == "Refugio" ~ 2, 
     site == "R Beach" ~ 3
   )) %>% 
-  mutate(fish_id = paste(site_code, date, sample_number, sep = "_"))
+  mutate(fish_id = paste(site_code, date, sample_number, sep = "_")) %>% 
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%  #adds in column for season
+  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile"))
 
 prey_size_data <- prey_size_data %>% 
   rename("recorded_fish_id" = "fish_id") %>% 
@@ -80,6 +103,7 @@ gut_contents_all <- gut_contents_all %>%
   mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile"))  #Adds column for life stage contingent on standard length of fish
 
 write.csv(gut_contents_all, here("data", "Diet_gutcontent_data.csv"))
+write.csv(seine_data, here("data", "Diet_seine_data.csv"))
 ```
 
 Add fish data to prey size data frame

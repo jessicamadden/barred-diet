@@ -1,0 +1,184 @@
+---
+title: "Population analysis"
+author: "Jess Madden"
+date: "2/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(ggbeeswarm)
+```
+
+Initial wrangling of seine data
+
+```{r}
+seine_data <- read_xlsx(here("data", "Diet_seasonal_seine_data_raw.xlsx"), na = "NA") %>% 
+  clean_names() %>% 
+  subset(select = -c(30:61))
+
+barred <- seine_data %>% 
+  mutate(site_code = case_when(
+    site == "Percos" ~ 1, 
+    site == "Refugio" ~ 2, 
+    site == "R Beach" ~ 3)) %>% 
+  mutate(fish_id = paste(site_code, date, sample_number, sep = "_")) %>%  #Create unique fish id code in each data set
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%  #adds in column for season
+  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile")) %>%   #Adds column for life stage contingent on standard length
+  filter(sp_code == "AMAR") %>% 
+  filter(gut_collected == "Yes") %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  filter(lifestage %in% c("Adult", "Juvenile")) %>% 
+  filter(season %in% c("Summer", "Fall"))
+```
+
+Table of fish collected for SCA
+
+```{r}
+barred_summary <- barred %>% 
+  group_by(site, season) %>% 
+  summarise(sample_size = n(), 
+            mean_sl = mean(sl_mm), 
+            median_sl = median(sl_mm), 
+            min_sl = min(sl_mm), 
+            max_sl = max(sl_mm))
+
+barred_summary %>% 
+  kbl() %>% 
+  kable_styling()
+
+ggplot(barred_summary, aes(x = site, y = mean_sl, fill = season)) +
+  geom_col(position = "dodge")
+
+ggplot(barred, aes(x = site, y = sl_mm, color = season)) +
+  geom_beeswarm() +
+  theme_minimal()
+```
+
+Histogram of barred surfperch collected for gut analysis
+
+```{r}
+ggplot(barred, aes(x = sl_mm)) +
+  geom_histogram() +
+  facet_grid(season ~ site) +
+  theme_minimal()
+```
+
+```{r}
+#Load data
+
+emerita_pop <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx"), na = "NA") %>% 
+  clean_names() %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  filter(taxa == "Emerita analoga") %>% 
+  filter(transect %in% c("A", "B", "C"))
+  
+```
+
+```{r}
+emerita_abundance <- emerita_pop %>% 
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%   #adds in column for season
+  filter(season %in% c("Summer", "Fall")) %>% 
+  group_by(site, date, year, season, transect) %>% 
+  summarise(abundance = sum(count))
+
+emerita_abundance_summary <- emerita_abundance %>% 
+  group_by(site, date, year, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = (sd(abundance))/sqrt(n()), 
+            sample_size = n())
+```
+
+```{r}
+emerita_abundance_summary %>% 
+  kbl() %>% 
+  kable_styling()
+```
+
+
+```{r}
+ggplot(emerita_abundance_summary, aes(x = site, y = mean_abundance, fill = season)) +
+  geom_bar(stat = "identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.2, 
+                position = position_dodge(.9)) +
+  theme_minimal() +
+  scale_fill_manual("legend", values = c("#D4820D", "#00B5AB")) +
+  facet_wrap(~year) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site")
+```
+
+```{r}
+emerita_avg_summ <- emerita_abundance %>% 
+  group_by(site, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = sd(abundance)/sqrt(n()), 
+            no_transects = n())
+```
+
+```{r}
+ggplot(emerita_avg_summ, aes(x = site, y = mean_abundance, fill = season)) +
+  geom_bar(stat="identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.2, 
+                position = position_dodge(.9)) +
+  scale_fill_manual("legend", values = c("#D4820D", "#00B5AB")) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site") +
+  theme_minimal()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

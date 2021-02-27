@@ -1,0 +1,52 @@
+ID,Order,Family,Genus,Species,Taxa,zone_trophic
+Megalorchestia corniculata,Amphipoda,Talitridae,Megalorchestia,corniculata,Beach hopper,Beach kelp associated
+Megalorchestia spp.,Amphipoda,Talitridae,Megalorchestia,NA,Beach hopper,Beach kelp associated
+Fucellia spp. larva,Diptera,Anthomyiidae,Fucellia,NA,Kelp fly,Beach kelp associated
+Fucellia spp. pupa,Diptera,Anthomyiidae,Fucellia,NA,Kelp fly,Beach kelp associated
+Ancinus granulatus,Isopoda,Ancinidae,Ancinus,granulatus,Intertidal isopod,Beach scavenger
+Excirolana chiltoni,Isopoda,Cirolanidae,Excirolana,chiltoni,Intertidal isopod,Beach scavenger
+Excirolana linguifrons,Isopoda,Cirolanidae,Excirolana,linguifrons,Intertidal isopod,Beach scavenger
+Excirolana spp.,Isopoda,Cirolanidae,Excirolana,NA,Intertidal isopod,Beach scavenger
+Gnorimosphaeroma nobeli,Isopoda,Sphaeromatidae,Gnorimosphaeroma,noblei,Intertidal isopod,Beach scavenger
+Isopod,Isopoda,NA,NA,NA,Intertidal isopod,Beach scavenger
+Donax gouldii,Cardiida,Donacidae,Donax,gouldii,Bean clam,Beach suspension feeder
+Clam shell,NA,NA,NA,NA,Bivalve,Beach suspension feeder
+Tivela stultorum,Venerida,Veneridae,Tivela,stultorum,Pismo clam,Beach suspension feeder
+Emerita analoga,Decapoda,Hippidae,Emerita,analoga,Sand crab,Beach suspension feeder
+Blepharipoda occidentalis,Decapoda,Albuneidae,Blepharipoda,occidentalis,Spiny sand crab,Beach suspension feeder
+Cumacean,Cumacea,NA,NA,NA,Cumacean,Marine deposit feeder
+Sipunculid,NA,NA,NA,NA,Sipunculid,Marine deposit feeder
+Atylus tridens,Amphipoda,Atylidae,Atylus,tridens,Marine amphipod,Marine detritovore
+Gammarid amphipod,Amphipoda,NA,NA,NA,Marine amphipod,Marine detritovore
+Caprellid amphipod,Amphipoda,Caprellidae,NA,NA,Marine amphipod,Marine detritovore
+Amphipod,Amphipoda,NA,NA,NA,Marine amphipod,Marine detritovore
+Idotea spp.,Isopoda,Idoteidae,Idotea,NA,Idotea,Marine kelp associated
+Idotea resecata,Isopoda,Idoteidae,Idotea,resecata,Idotea,Marine kelp associated
+Idotea rufescens,Isopoda,Idoteidae,Idotea,rufescens,Idotea,Marine kelp associated
+Lottia pelta,NA,Lottidae,Lottia,pelta,Limpet,Marine kelp associated
+Limpet,NA,NA,NA,NA,Limpet,Marine kelp associated
+Purple urchin,Echinoida,Stronylocentrotidae,Strongylocentrotus,purpuratus,Purple urchin,Marine kelp associated
+Barnacle,Sessilia,NA,NA,NA,Barnacle,Marine suspension feeder
+Membranipora serrilamella,Cheilostomatida,Membraniporidae,Membranipora,serrilamella,Bryozoan,Marine suspension feeder
+Bryozoan A,NA,NA,NA,NA,Bryozoan,Marine suspension feeder
+Fish larva,NA,NA,NA,NA,Larval fish,Marine suspension feeder
+Mysid,Mysida,NA,NA,NA,Mysid,Marine suspension feeder
+Archaeomysis maculata,Mysida,Mysidae,Archaeomysis,maculata,Mysid,Marine suspension feeder
+Holmesimysis costata,Mysida,Mysidae,Holmesimysis,costata,Mysid,Marine suspension feeder
+Dendraster excentricus,Clypeasteroida,Dendrasteridae,Dendraster,excentricus,Sand dollar,Marine suspension feeder
+Algae/Phyllo,NA,NA,NA,NA,Algae/Phyllo,NA
+Empty,NA,NA,NA,NA,NA,NA
+Acanthocephala,NA,NA,NA,NA,Parasite,NA
+Nematode,NA,NA,NA,NA,Parasite,NA
+Trematoda ,NA,NA,NA,NA,Parasite,NA
+Polychaete,NA,NA,NA,NA,Polychaete,Not classified
+Unidentified,NA,NA,NA,NA,Unidentified,Not classified
+Cancer spp.,Decapoda,Cancridae,Cancer,NA,Unidentified decapod,Not classified
+Crangon nigricauda,Decapoda,Crangonidae,Crangon,nigricauda,Unidentified decapod,Not classified
+Zoea,Decapoda,NA,NA,NA,Unidentified decapod,Not classified
+Unknown Crab,Decapoda,NA,NA,NA,Unidentified decapod,Not classified
+Caridean A,Decapoda,NA,NA,NA,Unidentified decapod,Not classified
+Decapod,Decapoda,NA,NA,NA,Unidentified decapod,Not classified
+Caridean,Decapoda,NA,NA,NA,Unidentified decapod,Not classified
+Gastropod,NA,NA,NA,NA,Unidentified gastropod,Not classified
+Urchin,Echinoida,Stronylocentrotidae,Strongylocentrotus,NA,Urchin,Not classified

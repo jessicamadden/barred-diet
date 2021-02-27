@@ -19,37 +19,17 @@ library(ggbeeswarm)
 Initial wrangling of seine data
 
 ```{r}
-seine_data <- read_xlsx(here("data", "Diet_seasonal_seine_data_raw.xlsx")) %>% 
-  clean_names() %>% 
-  subset(select = -c(30:61))
+seine_data <- read.csv(here("data", "Diet_seine_data.csv")) %>% 
+  clean_names()
 
-barred <- seine_data %>% 
-  mutate(site_code = case_when(
-    site == "Percos" ~ 1, 
-    site == "Refugio" ~ 2, 
-    site == "R Beach" ~ 3)) %>% 
-  mutate(fish_id = paste(site_code, date, sample_number, sep = "_")) %>%  #Create unique fish id code in each data set
-  mutate(month = month(date)) %>% 
-  mutate(season = case_when(
-    month == 6 ~ "Summer", 
-    month == 7 ~ "Summer", 
-    month == 8 ~ "Summer", 
-    month == 9 ~ "Fall", 
-    month == 10 ~ "Fall", 
-    month == 11 ~ "Fall", 
-    month == 12 ~ "Winter", 
-    month == 1 ~ "Winter", 
-    month == 2 ~ "Winter", 
-    month == 3 ~ "Spring",
-    month == 4 ~ "Spring",
-    month == 5 ~ "Spring"
-  )) %>%  #adds in column for season
-  mutate(lifestage = ifelse(sl_mm >= 130, "Adult", "Juvenile")) %>%   #Adds column for life stage contingent on standard length
-  filter(sp_code == "AMAR") %>% 
+barred <- seine_data %>%   
+  filter(common_name == "Barred surfperch") %>% 
   filter(gut_collected == "Yes") %>% 
   filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
   filter(lifestage %in% c("Adult", "Juvenile")) %>% 
   filter(season %in% c("Summer", "Fall"))
+
+
 ```
 
 Table of fish collected for SCA
@@ -90,10 +70,11 @@ ggplot(barred, aes(x = sl_mm)) +
 emerita_pop <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx"), na = "NA") %>% 
   clean_names() %>% 
   filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
-  filter(taxa == "Emerita analoga") %>% 
-  filter(transect %in% c("A", "B", "C"))
+  filter(taxa == "Emerita analoga")
   
 ```
+
+### Emerita abundance
 
 ```{r}
 emerita_abundance <- emerita_pop %>% 
@@ -111,28 +92,181 @@ emerita_abundance <- emerita_pop %>%
     month == 3 ~ "Spring",
     month == 4 ~ "Spring",
     month == 5 ~ "Spring"
-  )) %>%   #adds in column for season
+  ))  #adds in column for season
+emerita_abundance$season <- factor(emerita_abundance$season, levels = c("Winter", "Spring", "Summer", "Fall"))
+  
+emerita_abundance <- emerita_abundance %>% 
   filter(season %in% c("Summer", "Fall")) %>% 
-  group_by(site, date, season, transect) %>% 
-  summarise(abundance = sum(count))
+  group_by(site, date, year, season, transect) %>% 
+  summarise(abundance = sum(abundance))
 
 emerita_abundance_summary <- emerita_abundance %>% 
-  group_by(site, date, season) %>% 
+  group_by(site, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = (sd(abundance))/sqrt(n()), 
+            sample_size = n())
+
+emerita_abundance_summary_2020 <- emerita_abundance %>% 
+  filter(year == 2020) %>% 
+  group_by(site, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = (sd(abundance))/sqrt(n()), 
+            sample_size = n())
+
+emerita_abundance_summary_2019 <- emerita_abundance %>% 
+  filter(year == 2019) %>% 
+  group_by(site, season) %>% 
   summarise(mean_abundance = mean(abundance), 
             se = (sd(abundance))/sqrt(n()), 
             sample_size = n())
 ```
 
 ```{r}
-ggplot(emerita_abundance_summary, aes(x = site, y = mean_abundance, fill = season)) +
-  geom_col(position = "dodge") +
-  theme_minimal()
+emerita_abundance_summary %>% 
+  kbl() %>% 
+  kable_styling()
 ```
 
 
+```{r, fig.width=10}
+ggplot(emerita_abundance_summary, aes(x = reorder(site, -mean_abundance), y = mean_abundance, fill = season)) +
+  geom_bar(stat = "identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.2, 
+                position = position_dodge(.9)) +
+  theme_minimal() +
+  scale_fill_manual("legend", values = c("#657A85", "#354A54")) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site")
+```
+```{r, fig.width=10}
+ggplot(emerita_abundance_summary_2019, aes(x = reorder(site, -mean_abundance), y = mean_abundance, fill = season)) +
+  geom_bar(stat = "identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.1, 
+                position = position_dodge(.9)) +
+  theme_minimal() + 
+  scale_fill_manual("legend", values = c("#657A85", "#354A54")) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site") +
+  labs(title = "Mean abundance of Emerita analoga in 2019") +
+  theme(legend.title = element_blank())  
+
+ggplot(emerita_abundance_summary_2020, aes(x = reorder(site, -mean_abundance), y = mean_abundance, fill = season)) +
+  geom_bar(stat = "identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.1, 
+                position = position_dodge(.9)) +
+  theme_minimal() + 
+  scale_fill_manual("legend", values = c("#657A85", "#354A54")) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site") +
+  labs(title = "Mean abundance of Emerita analoga in 2020") +
+  theme(legend.title = element_blank())
+```
+
+```{r}
+emerita_avg_summ <- emerita_abundance %>% 
+  group_by(site, season) %>% 
+  summarise(mean_abundance = mean(abundance), 
+            se = sd(abundance)/sqrt(n()), 
+            no_transects = n())
+```
+
+```{r, fig.width=10}
+ggplot(emerita_avg_summ, aes(x = reorder(site, -mean_abundance), y = mean_abundance, fill = season)) +
+  geom_bar(stat="identity", 
+           position = "dodge") +
+  geom_errorbar(aes(ymax = mean_abundance+se, 
+                    ymin = mean_abundance-se, 
+                    fill = season), 
+                width = 0.2, 
+                position = position_dodge(.9)) +
+  scale_fill_manual("legend", values = c("#657A85", "#354A54")) +
+  ylab("Mean E. analoga abundance (m^-1)") +
+  xlab("Site") +
+  theme_minimal()
+
+```
+
+### Emerita size distribution
 
 
+```{r, fig.width=10}
+emerita_pop_data <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx"), na = "NA") %>% 
+  clean_names() %>% 
+  subset(select = -c(22:23)) %>%
+  filter(taxa == "Emerita analoga") %>%   
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%   #adds in column for season
+  filter(season %in% c("Summer", "Fall"))
 
+emerita_pop_data$site <- factor(emerita_pop_data$site, levels = c("Percos", "Refugio", "R Beach"))
+
+perc_emerita <- emerita_pop_data %>% 
+  filter(site == "Percos")
+refu_emerita <- emerita_pop_data %>% 
+  filter(site == "Refugio")
+rb_emerita <- emerita_pop_data %>% 
+  filter(site == "R Beach")
+
+ggplot(emerita_pop_data, aes(x = width_length_mm)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 1, 
+                 fill = "#657A85") +
+  geom_density(binwidth = 1, 
+               outline.type = "full", 
+               size = .75, 
+               color = "#354A54") +
+  theme_minimal() +
+  xlim(0, 25) +
+  facet_wrap(~site) +
+  labs(x = "E. analoga max length (mm)", y = "Frequency", title = "Size distribution of Emerita analoga collected from beach")
+
+ggplot(perc_emerita, 
+       aes(x = width_length_mm)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "#657A85") +
+  labs(x = "Emerita size (mm)", y = "Count", title = "Percos") +
+  theme_minimal() +
+  facet_wrap(~season)
+
+ggplot(refu_emerita, aes(x = width_length_mm)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "#657A85") +
+  labs(x = "Emerita size (mm)", y = "Count", title = "Refugio") +
+  theme_minimal() +
+  facet_wrap(~season)
+ggplot(rb_emerita, aes(x = width_length_mm)) +
+  geom_histogram(binwidth = 1, 
+                 fill = "#657A85") +
+  labs(x = "Emerita size (mm)", y = "Count", title = "R Beach") +
+  theme_minimal() +
+  facet_wrap(~season)
+```
 
 
 

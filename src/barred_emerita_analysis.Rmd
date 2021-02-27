@@ -1,0 +1,110 @@
+---
+title: "Barred surfperch vs Emerita Analysis"
+author: "Jess Madden"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(lawstat)
+```
+
+```{r}
+seine_data <- read.csv(here("data", "Diet_seine_data.csv")) %>% 
+  clean_names()
+
+barred <- seine_data %>%   
+  filter(common_name == "Barred surfperch") %>% 
+  filter(gut_collected == "Yes") %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  filter(lifestage %in% c("Adult", "Juvenile")) %>% 
+  filter(season %in% c("Summer", "Fall"))
+
+```
+
+```{r}
+emerita_pop <- read_xlsx(here("data", "Diet_emerita_population_data_raw.xlsx"), na = "NA") %>% 
+  clean_names() %>% 
+  filter(site %in% c("Percos", "Refugio", "R Beach")) %>% 
+  filter(taxa == "Emerita analoga")
+
+emerita_abundance <- emerita_pop %>% 
+  mutate(month = month(date)) %>% 
+  mutate(season = case_when(
+    month == 6 ~ "Summer", 
+    month == 7 ~ "Summer", 
+    month == 8 ~ "Summer", 
+    month == 9 ~ "Fall", 
+    month == 10 ~ "Fall", 
+    month == 11 ~ "Fall", 
+    month == 12 ~ "Winter", 
+    month == 1 ~ "Winter", 
+    month == 2 ~ "Winter", 
+    month == 3 ~ "Spring",
+    month == 4 ~ "Spring",
+    month == 5 ~ "Spring"
+  )) %>%   #adds in column for season
+  filter(season %in% c("Summer", "Fall")) %>% 
+  group_by(site, date, year, season, transect) %>% 
+  summarise(abundance = sum())
+
+```
+
+```{r}
+# One-way ANOVA: comparison of emerita abundance between sites
+
+# Pull vectos of abundance for each site
+perc_emerita <- emerita_abundance %>% 
+  filter(site == "Percos") %>% 
+  pull(abundance)
+
+refu_emerita <- emerita_abundance %>% 
+  filter(site == "Refugio") %>% 
+  pull(abundance)
+
+rb_emerita <- emerita_abundance %>% 
+  filter(site == "R Beach") %>% 
+  pull(abundance)
+
+#Check assumptions by emaining qq plots and histograms for data
+
+#normality
+
+qqnorm(perc_emerita)
+hist(perc_emerita)
+shapiro.test(perc_emerita) #The Shapiro-Wilk Test tests the null hypothesis that the samples come from a normal distribution vs. the alternative hypothesis that the samples do not come from a normal distribution. In this case, the p-value of the test is 0.2989, which is more than the alpha level of 0.05. This suggests that the samples come from a normal distribution.
+
+qqnorm(refu_emerita)
+hist(refu_emerita)
+shapiro.test(refu_emerita) # non-normal
+
+qqnorm(rb_emerita)
+hist(rb_emerita)
+shapiro.test(rb_emerita) #borderline normal
+
+#equal variance
+
+boxplot(abundance ~ site, data=emerita_abundance)
+
+levene.test(emerita_abundance$abundance, emerita_abundance$site, location="mean") # population variances are not equal if p < 0.05: therefore, this fails to meet the assumption of equal variance.
+
+sample_sizes <- emerita_abundance %>% 
+  group_by(site) %>% 
+  summarise(sample_size = n())
+```
+
+```{r}
+#Kruskal-Wallis - non-parametric alternative to one-way anova
+
+kruskal.test(abundance ~ site, data=emerita_abundance)
+```
+
+
+
